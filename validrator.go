@@ -35,14 +35,14 @@ type FieldValidationFail struct {
 }
 
 // RuleHandlerFunc is type for custom handler.
-type RuleHandlerFunc func(v interface{}, ruleArgs string) bool
+type RuleHandlerFunc func(v interface{}, ruleArgs []string) bool
 
 func (v *ValidationError) Error() string {
 	builder := strings.Builder{}
 
 	for fieldName, fail := range v.Failed {
 		rulesStr := strings.Join(fail.Rules, ", ")
-		builder.WriteString(fmt.Sprintf("field=%s\nrules=%s\nvalue=%+v\n", fieldName, rulesStr, fail.Value))
+		builder.WriteString(fmt.Sprintf("field=%s rules=%s value=%+v\n", fieldName, rulesStr, fail.Value))
 	}
 
 	return builder.String()
@@ -55,13 +55,16 @@ func NewValidrator() *Validrator {
 	}
 }
 
-func parseRuleArgs(tag string) string {
+func parseRuleArgs(tag string) []string {
 	colonIndex := strings.Index(tag, ":")
 	if colonIndex == -1 {
-		return ""
+		return []string{}
 	}
 
-	return tag[colonIndex+1:]
+	params := tag[colonIndex+1:]
+
+	// Разделяем параметры по запятой
+	return strings.Split(params, ",")
 }
 
 // Validate method processes validation of map by rules.
@@ -71,6 +74,8 @@ func (v *Validrator) Validate(data map[string]interface{}, rules map[string][]st
 	for fieldKey, ruleSet := range rules {
 		fieldValue, fieldExists := data[fieldKey]
 
+		// Optional is special rule
+		// If field does not exist BUT optional rule applied, then no further validations, just skip
 		if !fieldExists && slices.Contains(ruleSet, tagOptional) {
 			continue
 		}

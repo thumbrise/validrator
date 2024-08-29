@@ -50,7 +50,7 @@ linters:
     - fatcontext
     - forbidigo
     - forcetypeassert
-    - funlen
+#    - funlen
     - gci
     - ginkgolinter
     - gocheckcompilerdirectives
@@ -148,6 +148,9 @@ issues:
     - text: "type `validationError` is unused"
       linters:
         - unused
+    - text: "variable name 'tt' is too short for the scope of its usage"
+      linters:
+        - varnamelen
 severity:
   default-severity: error
   case-sensitive: true

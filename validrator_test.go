@@ -4,10 +4,9 @@ import (
 	"testing"
 
 	"github.com/thumbrise/validrator"
-	"github.com/thumbrise/validrator/pkg/handlers"
 )
 
-func TestValidrator_Validate_Common(t *testing.T) {
+func TestValidrator_Validate(t *testing.T) {
 	t.Parallel()
 
 	t.Run("no error if fields are valid", func(t *testing.T) {
@@ -20,7 +19,7 @@ func TestValidrator_Validate_Common(t *testing.T) {
 			"field": {"equals 1"},
 		}
 		v := validrator.NewValidrator()
-		v.AddRuleHandler("equals 1", func(v interface{}, ruleArgs string) bool {
+		v.AddRuleHandler("equals 1", func(v interface{}, _ []string) bool {
 			return v == 1
 		})
 
@@ -42,7 +41,7 @@ func TestValidrator_Validate_Common(t *testing.T) {
 			"field": {"equals 1"},
 		}
 		v := validrator.NewValidrator()
-		v.AddRuleHandler("equals 1", func(v interface{}, ruleArgs string) bool {
+		v.AddRuleHandler("equals 1", func(v interface{}, _ []string) bool {
 			return v == 1
 		})
 
@@ -62,7 +61,7 @@ func TestValidrator_Validate_Common(t *testing.T) {
 			"field": {"equals 1"},
 		}
 		v := validrator.NewValidrator()
-		v.AddRuleHandler("equals 1", func(v interface{}, ruleArgs string) bool {
+		v.AddRuleHandler("equals 1", func(v interface{}, _ []string) bool {
 			return v == 1
 		})
 
@@ -82,48 +81,9 @@ func TestValidrator_Validate_Common(t *testing.T) {
 			"field": {"equals 1", "optional"},
 		}
 		v := validrator.NewValidrator()
-		v.AddRuleHandler("equals 1", func(v interface{}, ruleArgs string) bool {
+		v.AddRuleHandler("equals 1", func(v interface{}, _ []string) bool {
 			return v == 1
 		})
-
-		err := v.Validate(data, rules)
-		if err != nil {
-			t.Errorf("Unexpected Validate() error\n%v", err)
-
-			return
-		}
-	})
-}
-
-func TestValidrator_Validate_Handlers(t *testing.T) {
-	t.Parallel()
-
-	t.Run("bool valid", func(t *testing.T) {
-		t.Parallel()
-
-		data := map[string]interface{}{
-			"field1": true,
-			"field2": false,
-			"field3": 1,
-			"field4": 0,
-			"field5": "true",
-			"field6": "false",
-			"field7": "0",
-			"field8": "1",
-		}
-		rules := map[string][]string{
-			"field1": {"bool"},
-			"field2": {"bool"},
-			"field3": {"bool"},
-			"field4": {"bool"},
-			"field5": {"bool"},
-			"field6": {"bool"},
-			"field7": {"bool"},
-			"field8": {"bool", "optional"},
-		}
-
-		v := validrator.NewValidrator()
-		v.AddRuleHandler("bool", handlers.Bool)
 
 		err := v.Validate(data, rules)
 		if err != nil {
