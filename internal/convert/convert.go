@@ -1,18 +1,28 @@
-// Package convert contains methods for conversion some data types to golang struct
+// Package convert contains methods for conversion some data types
 package convert
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 )
 
 // JSONToStruct is converts io.Reader to golang struct.
-func JSONToStruct(r io.Reader, obj any) error {
-	decoder := json.NewDecoder(r)
+func JSONToStruct(input []byte, obj any) error {
+	decoder := json.NewDecoder(bytes.NewReader(input))
 	err := decoder.Decode(obj)
 
 	return errors.Unwrap(err)
+}
+
+// JSONToMap is converts io.Reader to golang map.
+func JSONToMap(input []byte, output map[string]interface{}) error {
+	err := json.Unmarshal(input, &output)
+	if err != nil {
+		return errors.Unwrap(err)
+	}
+
+	return nil
 }
 
 // MapToStruct is converts golang map to golang struct.

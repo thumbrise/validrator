@@ -23,8 +23,8 @@ func Email(v interface{}, _ []string) bool {
 }
 
 // Bool validate false, true, 1, 0, "true", "false", "0", "1".
-func Bool(v interface{}, _ []string) bool {
-	switch v {
+func Bool(v reflect.Value, _ []string) bool {
+	switch v.Interface() {
 	case 1, 0, false, true, "true", "false", "0", "1":
 		return true
 	}
@@ -33,46 +33,44 @@ func Bool(v interface{}, _ []string) bool {
 }
 
 // Len validate length for next types: String, Slice, Map, Array, Int, Int8, Int16, Int32, Int64, Uint, Uint8, Uint16, Uint32, Uint64, Uintptr, Float32, Float64.
-func Len(val interface{}, args []string) bool {
+func Len(val reflect.Value, args []string) bool {
 	if len(args) < 1 {
 		panic("Len expects 1 argument")
 	}
 
 	param := args[0]
 
-	field := reflect.ValueOf(val)
-
-	switch field.Kind() { //nolint:exhaustive
+	switch val.Kind() { //nolint:exhaustive
 	case reflect.String:
 		p := asInt(param)
 
-		return int64(utf8.RuneCountInString(field.String())) == p
+		return int64(utf8.RuneCountInString(val.String())) == p
 
 	case reflect.Slice, reflect.Map, reflect.Array:
 		p := asInt(param)
 
-		return int64(field.Len()) == p
+		return int64(val.Len()) == p
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		p := asIntFromType(field.Type(), param)
+		p := asIntFromType(val.Type(), param)
 
-		return field.Int() == p
+		return val.Int() == p
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		p := asUint(param)
 
-		return field.Uint() == p
+		return val.Uint() == p
 
 	case reflect.Float32:
 		p := asFloat32(param)
 
-		return field.Float() == p
+		return val.Float() == p
 
 	case reflect.Float64:
 		p := asFloat64(param)
 
-		return field.Float() == p
+		return val.Float() == p
 	default:
-		panic(fmt.Sprintf("Bad field type %T", field.Interface()))
+		panic(fmt.Sprintf("Bad field type %T", val.Interface()))
 	}
 }

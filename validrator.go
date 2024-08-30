@@ -7,15 +7,26 @@
 package validrator
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/thumbrise/validrator/internal/convert"
 )
 
 var errInvalidRule = errors.New("invalid rule")
 
-const tagOptional = "optional"
+const (
+	// tagOptional define type able to skip if value empty or field even does not exist.
+	tagOptional = "optional"
+
+	// tagRequired define rule which returns in validation error if optional not applied but field empty or even does not exist.
+	tagRequired = "required"
+)
 
 // Validrator is main struct of package. Create via constructor.
 type Validrator struct {
@@ -35,7 +46,7 @@ type FieldValidationFail struct {
 }
 
 // RuleHandlerFunc is type for custom handler.
-type RuleHandlerFunc func(v interface{}, ruleArgs []string) bool
+type RuleHandlerFunc func(v reflect.Value, ruleArgs []string) bool
 
 func (v *ValidationError) Error() string {
 	builder := strings.Builder{}
@@ -67,16 +78,26 @@ func parseRuleArgs(tag string) []string {
 	return strings.Split(params, ",")
 }
 
-// Validate method processes validation of map by rules.
-func (v *Validrator) Validate(data map[string]interface{}, rules map[string][]string) error {
+// ValidateMap method processes validation of map by rules.
+func (v *Validrator) ValidateMap(data map[string]interface{}, rules map[string][]string) error {
 	errs := make(map[string]FieldValidationFail)
 
 	for fieldKey, ruleSet := range rules {
 		fieldValue, fieldExists := data[fieldKey]
 
-		// Optional is special rule
-		// If field does not exist BUT optional rule applied, then no further validations, just skip
-		if !fieldExists && slices.Contains(ruleSet, tagOptional) {
+		reflectedValue := reflect.ValueOf(fieldValue)
+
+		if !fieldExists || (!reflectedValue.IsValid() && fieldValue == nil) {
+			// Optional is special rule
+			// If field empty BUT "optional" rule applied, then no "required" error
+			if !slices.Contains(ruleSet, tagOptional) {
+				errs[fieldKey] = FieldValidationFail{
+					Field: fieldKey,
+					Rules: []string{tagRequired},
+					Value: nil,
+				}
+			}
+
 			continue
 		}
 
@@ -84,19 +105,9 @@ func (v *Validrator) Validate(data map[string]interface{}, rules map[string][]st
 			return s == tagOptional
 		})
 
-		fieldErrs := make([]string, 0, 10)
-
-		for _, rule := range ruleSet {
-			handler, ok := v.handlers[rule]
-			if !ok {
-				return fmt.Errorf("%w: %s", errInvalidRule, rule)
-			}
-
-			if handler(fieldValue, parseRuleArgs(rule)) {
-				continue
-			}
-
-			fieldErrs = append(fieldErrs, rule)
+		fieldErrs, err := v.validateField(reflectedValue, ruleSet)
+		if err != nil {
+			return err
 		}
 
 		if len(fieldErrs) > 0 {
@@ -115,6 +126,64 @@ func (v *Validrator) Validate(data map[string]interface{}, rules map[string][]st
 	}
 
 	return nil
+}
+
+func (v *Validrator) validateField(value reflect.Value, ruleSet []string) ([]string, error) {
+	fieldErrs := make([]string, 0, 10)
+
+	for _, rule := range ruleSet {
+		handler, ok := v.handlers[rule]
+		if !ok {
+			return fieldErrs, fmt.Errorf("%w: %s", errInvalidRule, rule)
+		}
+
+		if handler(value, parseRuleArgs(rule)) {
+			return fieldErrs, nil
+		}
+
+		fieldErrs = append(fieldErrs, rule)
+	}
+
+	return fieldErrs, nil
+}
+
+// ValidateJSON method processes validation of map by rules.
+func (v *Validrator) ValidateJSON(input []byte, rules map[string][]string) error {
+	data := make(map[string]interface{})
+
+	err := convert.JSONToMap(input, data)
+	if err != nil {
+		return errors.Unwrap(err)
+	}
+
+	return v.ValidateMap(data, rules)
+}
+
+// ValidateJSONReaderToStruct method processes validation of map by rules and marshall to struct.
+func (v *Validrator) ValidateJSONReaderToStruct(input io.Reader, rules map[string][]string, output any) error {
+	buf := bytes.Buffer{}
+
+	_, err := io.Copy(&buf, input)
+	if err != nil {
+		return errors.Unwrap(err)
+	}
+
+	return v.ValidateJSONToStruct(buf.Bytes(), rules, output)
+}
+
+// ValidateJSONToStruct method processes validation of map by rules and marshall to struct.
+func (v *Validrator) ValidateJSONToStruct(input []byte, rules map[string][]string, output any) error {
+	validationErrors := v.ValidateJSON(input, rules)
+	if validationErrors != nil {
+		return validationErrors
+	}
+
+	err := convert.JSONToStruct(input, output)
+	if err != nil {
+		return errors.Unwrap(err)
+	}
+
+	return validationErrors
 }
 
 // AddRuleHandler register new custom rule with handler function.

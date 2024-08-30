@@ -37,9 +37,9 @@ func TestBool(t *testing.T) {
 		v := validrator.NewValidrator()
 		v.AddRuleHandler("bool", handlers.Bool)
 
-		err := v.Validate(data, rules)
+		err := v.ValidateMap(data, rules)
 		if err != nil {
-			t.Errorf("Unexpected Validate() error\n%v", err)
+			t.Errorf("Unexpected ValidateMap() error\n%v", err)
 
 			return
 		}
@@ -69,9 +69,9 @@ func TestBool(t *testing.T) {
 		v := validrator.NewValidrator()
 		v.AddRuleHandler("bool", handlers.Bool)
 
-		err := v.Validate(data, rules)
+		err := v.ValidateMap(data, rules)
 		if err == nil {
-			t.Error("Expected Validate() error")
+			t.Error("Expected ValidateMap() error")
 
 			return
 		}
