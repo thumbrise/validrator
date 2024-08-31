@@ -15,6 +15,10 @@ run: ## make run main.go
 lint: ## golangci-lint run
 	golangci-lint run
 
+.PHONY: test
+test: ## go test ./...
+	go test ./...
+
 .PHONY: ci-go-lint-run
 ci-go-lint-run: ## golangci-lint run
 	$(GOLINT_CI_COMMAND) run
