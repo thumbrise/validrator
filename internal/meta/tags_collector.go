@@ -85,35 +85,39 @@ func computeTraverseTree(unit interface{}, output map[string]reflect.StructField
 		typ = typ.Elem()
 	}
 
+	// Preventing self reference
 	stringType := generateStringType(typ)
 	if stringType != "" && typesChain[stringType] {
 		return errHierarchyFinished
 	}
 
 	typesChain[stringType] = true
+	defer delete(typesChain, stringType)
+
 	outputKey = hierarchyKeyPrefix + fieldKey
+
+	var nextUnits []interface{}
+
+	var nextPrefix string
 
 	switch typ.Kind() { //nolint:exhaustive
 	case reflect.Struct:
-		var newPrefix string
 		if fieldKey != "" {
-			newPrefix = outputKey + "."
+			nextPrefix = outputKey + "."
 		} else {
-			newPrefix = hierarchyKeyPrefix
+			nextPrefix = hierarchyKeyPrefix
 		}
 
 		for i := range typ.NumField() {
 			field := typ.Field(i)
-			_ = computeTraverseTree(field, output, newPrefix, typesChain)
+			nextUnits = append(nextUnits, field)
 		}
 	case reflect.Slice:
-		newPrefix := ""
 		if outputKey != "" {
-			newPrefix = outputKey + ".*."
+			nextPrefix = outputKey + ".*."
 		}
 
-		_ = computeTraverseTree(typ.Elem(), output, newPrefix, typesChain)
-
+		nextUnits = append(nextUnits, typ.Elem())
 	default:
 	}
 
@@ -121,7 +125,9 @@ func computeTraverseTree(unit interface{}, output map[string]reflect.StructField
 		output[outputKey] = outputValue
 	}
 
-	delete(typesChain, stringType)
+	for _, nextUnit := range nextUnits {
+		_ = computeTraverseTree(nextUnit, output, nextPrefix, typesChain)
+	}
 
 	return errHierarchyFinished
 }
