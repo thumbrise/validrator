@@ -48,6 +48,7 @@ func TestExtract(t *testing.T) {
 			JustField string      `validate:"just_field"`
 			SelfRef   *testStruct `validate:"self_ref"` // this field must be ignored
 		} `validate:"nested_self_reference"`
+		FieldWithSkippedOption int `validate:",omitempty"`
 
 		// next must be ignored completely...
 		SelfReference                *testStruct `validate:"self_reference"`
@@ -57,40 +58,41 @@ func TestExtract(t *testing.T) {
 		FieldWithCommaInsteadOfValue int     `validate:""`
 		FieldWithWhiteSpaceValue     string  `validate:"    "`
 		FieldWithPrivateValue        int     `validate:"-"`
-		FieldWithJustOptions         int     `validate:",omitempty"`
 		FieldWithInvalidTag          int     `validate:field_with_invalid_tag` //nolint:govet
 	}
 
 	expected := map[string][]string{
-		"SimpleField":            {"simple_field"},
-		"SimpleFieldWithOptions": {"simple_field_with_options"},
+		"simpleField":            {"simple_field"},
+		"simpleFieldWithOptions": {"simple_field_with_options", "omitempty"},
 
-		"NestedStruct":              {"nested_struct"},
-		"NestedStruct.NestedFieldA": {"nested_field_a"},
-		"NestedStruct.NestedFieldB": {"nested_field_b"},
+		"nestedStruct":              {"nested_struct"},
+		"nestedStruct.nestedFieldA": {"nested_field_a"},
+		"nestedStruct.nestedFieldB": {"nested_field_b"},
 
-		"NestedPointerStruct":              {"nested_pointer_struct"},
-		"NestedPointerStruct.NestedFieldA": {"nested_field_a"},
-		"NestedPointerStruct.NestedFieldB": {"nested_field_b"},
+		"nestedPointerStruct":              {"nested_pointer_struct"},
+		"nestedPointerStruct.nestedFieldA": {"nested_field_a"},
+		"nestedPointerStruct.nestedFieldB": {"nested_field_b"},
 
-		"DeepStruct":                            {"deep_struct"},
-		"DeepStruct.JustField":                  {"just_field"},
-		"DeepStruct.AnotherStruct":              {"another_struct"},
-		"DeepStruct.AnotherStruct.NestedFieldA": {"nested_field_a"},
-		"DeepStruct.AnotherStruct.NestedFieldB": {"nested_field_b"},
+		"deepStruct":                            {"deep_struct"},
+		"deepStruct.justField":                  {"just_field"},
+		"deepStruct.anotherStruct":              {"another_struct"},
+		"deepStruct.anotherStruct.nestedFieldA": {"nested_field_a"},
+		"deepStruct.anotherStruct.nestedFieldB": {"nested_field_b"},
 
-		"AnonNestedStruct":                                   {"anon_nested_struct"},
-		"AnonNestedStruct.JustField":                         {"just_field"},
-		"AnonNestedStruct.AnotherAnonNestedStruct":           {"another_anon_nested_struct"},
-		"AnonNestedStruct.AnotherAnonNestedStruct.JustField": {"just_field"},
-		"FieldWithMultipleTags":                              {"field_with_multiple_tags_json"},
+		"anonNestedStruct":                                   {"anon_nested_struct"},
+		"anonNestedStruct.justField":                         {"just_field"},
+		"anonNestedStruct.anotherAnonNestedStruct":           {"another_anon_nested_struct"},
+		"anonNestedStruct.anotherAnonNestedStruct.justField": {"just_field"},
+		"fieldWithMultipleTags":                              {"field_with_multiple_tags_json"},
 
-		"Slice":                   {"slice"},
-		"Slice.*.JustBool":        {"just_bool"},
-		"Slice.*.NestedBoolSlice": {"nested_bool_slice"},
+		"slice":                   {"slice"},
+		"slice.*.justBool":        {"just_bool"},
+		"slice.*.nestedBoolSlice": {"nested_bool_slice"},
 
-		"NestedSelfReference":           {"nested_self_reference"},
-		"NestedSelfReference.JustField": {"just_field"},
+		"nestedSelfReference":           {"nested_self_reference"},
+		"nestedSelfReference.justField": {"just_field"},
+
+		"fieldWithSkippedOption": {"omitempty"},
 	}
 
 	tests := []struct {
@@ -152,19 +154,19 @@ func TestExtractInner(t *testing.T) {
 	}
 
 	expected := map[string][]string{
-		"NestedStruct":              {"nested_struct"},
-		"NestedStruct.NestedFieldA": {"nested_field_a"},
-		"NestedStruct.NestedFieldB": {"nested_field_b"},
+		"nestedStruct":              {"nested_struct"},
+		"nestedStruct.nestedFieldA": {"nested_field_a"},
+		"nestedStruct.nestedFieldB": {"nested_field_b"},
 
-		"NestedPointerStruct":              {"nested_pointer_struct"},
-		"NestedPointerStruct.NestedFieldA": {"nested_field_a"},
-		"NestedPointerStruct.NestedFieldB": {"nested_field_b"},
+		"nestedPointerStruct":              {"nested_pointer_struct"},
+		"nestedPointerStruct.nestedFieldA": {"nested_field_a"},
+		"nestedPointerStruct.nestedFieldB": {"nested_field_b"},
 
-		"DeepStruct":                            {"deep_struct"},
-		"DeepStruct.JustField":                  {"just_field"},
-		"DeepStruct.AnotherStruct":              {"another_struct"},
-		"DeepStruct.AnotherStruct.NestedFieldA": {"nested_field_a"},
-		"DeepStruct.AnotherStruct.NestedFieldB": {"nested_field_b"},
+		"deepStruct":                            {"deep_struct"},
+		"deepStruct.justField":                  {"just_field"},
+		"deepStruct.anotherStruct":              {"another_struct"},
+		"deepStruct.anotherStruct.nestedFieldA": {"nested_field_a"},
+		"deepStruct.anotherStruct.nestedFieldB": {"nested_field_b"},
 	}
 
 	tests := []struct {
@@ -265,8 +267,8 @@ func TestExtractNestedSelfReference(t *testing.T) {
 	}
 
 	expected := map[string][]string{
-		"NestedSelfReference":           {"nested_self_reference"},
-		"NestedSelfReference.JustField": {"just_field"},
+		"nestedSelfReference":           {"nested_self_reference"},
+		"nestedSelfReference.justField": {"just_field"},
 	}
 
 	tests := []struct {
@@ -312,6 +314,56 @@ func TestExtractSlice(t *testing.T) {
 	}
 
 	type testStruct struct {
+		SomeField int `validate:"some_field"`
+	}
+
+	expected := map[string][]string{
+		"someField": {"some_field"},
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want map[string][]string
+	}{
+		{
+			name: "should return correct tag set for value struct",
+			args: args{
+				structure: testStruct{},
+				tagKey:    tagKey,
+			},
+			want: expected,
+		},
+		{
+			name: "should return correct tag set for pointer struct",
+			args: args{
+				structure: &testStruct{},
+				tagKey:    tagKey,
+			},
+			want: expected,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			collector := meta.NewTagsCollector(tt.args.tagKey)
+			if got := collector.Extract(tt.args.structure); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Wrong result\nexpected:\n%+v\nactual:\n%+v", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestExtractInterface(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		structure any
+		tagKey    string
+	}
+
+	type testStruct struct {
 		Slice []struct {
 			JustBool        int    `validate:"just_bool"`
 			NestedBoolSlice []bool `validate:"nested_bool_slice"`
@@ -319,9 +371,9 @@ func TestExtractSlice(t *testing.T) {
 	}
 
 	expected := map[string][]string{
-		"Slice":                   {"slice"},
-		"Slice.*.JustBool":        {"just_bool"},
-		"Slice.*.NestedBoolSlice": {"nested_bool_slice"},
+		"slice":                   {"slice"},
+		"slice.*.justBool":        {"just_bool"},
+		"slice.*.nestedBoolSlice": {"nested_bool_slice"},
 	}
 
 	tests := []struct {

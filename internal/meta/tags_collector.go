@@ -5,6 +5,8 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+
+	strings2 "github.com/thumbrise/validrator/internal/strings"
 )
 
 const privateFieldVal = "-"
@@ -13,12 +15,12 @@ var errHierarchyFinished = errors.New("hierarchy finished")
 
 // TagsCollector godoc.
 type TagsCollector struct {
-	TagKey string
+	tagKey string
 }
 
 // NewTagsCollector constructor.
 func NewTagsCollector(tagKey string) *TagsCollector {
-	return &TagsCollector{TagKey: tagKey}
+	return &TagsCollector{tagKey: tagKey}
 }
 
 // Extract returns flat map of founded tags with dot and star notation (field.nestedField: someTag, sliceField.*.someType: someAnotherTag).
@@ -34,29 +36,31 @@ func (t *TagsCollector) traverseHierarchy(structure any) map[string][]string {
 	_ = computeTraverseTree(structure, toTraverse, "", typesChain)
 
 	for key, field := range toTraverse {
-		rawTag := field.Tag.Get(t.TagKey)
+		rawTag := field.Tag.Get(t.tagKey)
 		tagParts := strings.Split(rawTag, ",")
 
 		if len(tagParts) == 0 {
 			continue
 		}
 
-		someTagPart := tagParts[0]
-		if someTagPart == privateFieldVal {
-			continue
-		}
+		for _, tagPart := range tagParts {
+			if tagPart == privateFieldVal {
+				continue
+			}
 
-		if strings.TrimSpace(someTagPart) == "" {
-			continue
-		}
+			tagPart = strings.TrimSpace(tagPart)
+			if tagPart == "" {
+				continue
+			}
 
-		result[key] = append(result[key], someTagPart)
+			result[key] = append(result[key], tagPart)
+		}
 	}
 
 	return result
 }
 
-func computeTraverseTree(unit any, output map[string]reflect.StructField, hierarchyKeyPrefix string, typesChain map[string]bool) error { //nolint: cyclop // TODO: refactor
+func computeTraverseTree(unit interface{}, output map[string]reflect.StructField, hierarchyKeyPrefix string, typesChain map[string]bool) error { //nolint: cyclop // TODO: refactor
 	var typ reflect.Type
 
 	var fieldKey string
@@ -68,10 +72,11 @@ func computeTraverseTree(unit any, output map[string]reflect.StructField, hierar
 	switch val := unit.(type) {
 	case reflect.StructField:
 		outputValue = val
-		fieldKey = outputValue.Name
+		fieldKey = strings2.ToCamel(outputValue.Name)
 		typ = outputValue.Type
 	case reflect.Type:
 		typ = val
+
 	default:
 		typ = reflect.TypeOf(val)
 	}

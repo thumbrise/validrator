@@ -3,8 +3,8 @@ package handlers_test
 import (
 	"testing"
 
-	"github.com/thumbrise/validrator"
 	"github.com/thumbrise/validrator/internal/handlers"
+	"github.com/thumbrise/validrator/internal/validation"
 )
 
 func TestBool(t *testing.T) {
@@ -34,12 +34,15 @@ func TestBool(t *testing.T) {
 			"field8": {"bool"},
 		}
 
-		v := validrator.NewValidrator()
-		v.AddRuleHandler("bool", handlers.Bool)
+		validatable := validation.Validatable{
+			JSON:     data,
+			Rules:    rules,
+			Handlers: map[string]validation.RuleHandlerFunc{"bool": handlers.Bool},
+		}
 
-		err := v.ValidateMap(data, rules)
-		if err != nil {
-			t.Errorf("Unexpected ValidateMap() error\n%v", err)
+		validationErrors, _ := validation.Validate(&validatable)
+		if validationErrors != nil {
+			t.Errorf("Unexpected ValidateMap() error\n%v", validationErrors)
 
 			return
 		}
@@ -66,11 +69,14 @@ func TestBool(t *testing.T) {
 			"field7": {"bool"},
 		}
 
-		v := validrator.NewValidrator()
-		v.AddRuleHandler("bool", handlers.Bool)
+		validatable := validation.Validatable{
+			JSON:     data,
+			Rules:    rules,
+			Handlers: map[string]validation.RuleHandlerFunc{"bool": handlers.Bool},
+		}
 
-		err := v.ValidateMap(data, rules)
-		if err == nil {
+		validationErrors, _ := validation.Validate(&validatable)
+		if validationErrors == nil {
 			t.Error("Expected ValidateMap() error")
 
 			return
