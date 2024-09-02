@@ -10,9 +10,9 @@ import (
 )
 
 // DiffAsJSON converts to indented json and return diff between a and b.
-func DiffAsJSON(a any, b any) string {
-	expectedJSON, _ := json.MarshalIndent(a, "", "    ")
-	actualJSON, _ := json.MarshalIndent(b, "", "    ")
+func DiffAsJSON(expected any, actual any) string {
+	expectedJSON, _ := json.MarshalIndent(expected, "", "    ")
+	actualJSON, _ := json.MarshalIndent(actual, "", "    ")
 
 	return cmp.Diff(expectedJSON, actualJSON)
 }

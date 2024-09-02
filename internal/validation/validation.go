@@ -79,37 +79,27 @@ func Validate(validatable *Validatable) (*Error, error) {
 	for fieldKey, ruleSet := range validatable.Rules {
 		fieldValue, fieldExists := validatable.JSON[fieldKey]
 
-		reflectedValue := reflect.ValueOf(fieldValue)
-
 		// Handle empty or nil field
-		if !reflectedValue.IsValid() {
-			var safeUpTag string
-			if !fieldExists {
-				safeUpTag = tagOptional
-			} else {
-				safeUpTag = tagNullable
-			}
-
-			// If field empty or nil BUT some safeUpTag rule applied, then no "required" error
-			if !slices.Contains(ruleSet, safeUpTag) {
+		if !fieldExists || fieldValue == nil {
+			if slices.Contains(ruleSet, TagRequired) {
 				// Else add required error
 				validationErrors[fieldKey] = FieldValidationFail{
 					Field: fieldKey,
-					Rules: []string{tagRequired},
+					Rules: []string{TagRequired},
 					Value: nil,
 				}
 			}
 
-			// Any way, no reasons to continue validation on zero/empty field
 			continue
 		}
 
+		reflectedValue := reflect.ValueOf(fieldValue)
+
 		ruleSet = slices.DeleteFunc(ruleSet, func(s string) bool {
-			return s == tagOptional || s == tagNullable
+			return s == TagRequired
 		})
 
 		// Handle nested rules
-
 		fieldErrs, err := validateField(reflectedValue, ruleSet, validatable.Handlers)
 		if err != nil {
 			return nil, err

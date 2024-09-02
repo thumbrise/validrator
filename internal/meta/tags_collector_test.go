@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/thumbrise/validrator/internal/meta"
+	"github.com/thumbrise/validrator/internal/testutil"
 )
 
 const tagKey = "validate"
@@ -29,7 +30,7 @@ func TestExtract(t *testing.T) {
 
 	type testStruct struct {
 		SimpleField            string `validate:"simple_field"`
-		SimpleFieldWithOptions string `validate:"simple_field_with_options,omitempty"`
+		SimpleFieldWithOptions string `validate:"simple_field_with_options|omitempty"`
 
 		NestedStruct innerStruct `validate:"nested_struct"`
 
@@ -51,13 +52,13 @@ func TestExtract(t *testing.T) {
 			NestedBoolSlice []bool `validate:"nested_bool_slice"`
 		} `validate:"slice"`
 
-		SliceWithIterativeRule []int `validate:"equals 1,[]equals 1"`
+		SliceWithIterativeRule []int `validate:"equals 1|[]equals 1"`
 
 		NestedSelfReference struct {
 			JustField string      `validate:"just_field"`
 			SelfRef   *testStruct `validate:"self_ref"` // this field must be ignored
 		} `validate:"nested_self_reference"`
-		FieldWithSkippedOption int `validate:",omitempty"`
+		FieldWithSkippedOption int `validate:"|omitempty"`
 
 		// next must be ignored completely...
 		SelfReference                *testStruct `validate:"self_reference"`
@@ -134,8 +135,16 @@ func TestExtract(t *testing.T) {
 			t.Parallel()
 
 			collector := meta.NewTagsCollector(tt.args.tagKey)
-			if got := collector.Extract(tt.args.structure); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Wrong result\nexpected:\n%+v\nactual:\n%+v", tt.want, got)
+			got := collector.Extract(tt.args.structure)
+
+			diff := testutil.DiffAsJSON(tt.want, got)
+			if diff != "" {
+				t.Errorf(
+					"validation errors not match\nexpected:\n%#v\nactual:\n%#v\ndiff:\n%s\n",
+					tt.want,
+					got,
+					diff,
+				)
 			}
 		})
 	}
@@ -431,7 +440,7 @@ func TestExtractIterativeSlice(t *testing.T) {
 	}
 
 	type testStruct struct {
-		SliceWithIterativeRule []int `validate:"equals 1,[]equals 1"`
+		SliceWithIterativeRule []int `validate:"equals 1|[]equals 1"`
 	}
 
 	expected := map[string][]string{

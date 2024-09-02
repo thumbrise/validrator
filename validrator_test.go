@@ -33,7 +33,17 @@ func TestValidrator_Validate(t *testing.T) {
 	}
 
 	type testStructNumbersWithEquals1 struct {
-		Field1 int     `validate:"equals 1"`
+		Field1 int     `validate:"required|equals 1"`
+		Field2 int8    `validate:"required|equals 1"`
+		Field3 int16   `validate:"required|equals 1"`
+		Field4 int32   `validate:"required|equals 1"`
+		Field5 int64   `validate:"required|equals 1"`
+		Field6 float32 `validate:"required|equals 1"`
+		Field7 float64 `validate:"required|equals 1"`
+	}
+
+	type testStructNumbersWithEquals1AndNotRequired struct {
+		Field1 int     `json:"field1"       validate:"equals 1"`
 		Field2 int8    `validate:"equals 1"`
 		Field3 int16   `validate:"equals 1"`
 		Field4 int32   `validate:"equals 1"`
@@ -42,26 +52,16 @@ func TestValidrator_Validate(t *testing.T) {
 		Field7 float64 `validate:"equals 1"`
 	}
 
-	type testStructNumbersWithEquals1AndOptional struct {
-		Field1 int     `json:"field1"                 validate:"equals 1,optional"`
-		Field2 int8    `validate:"equals 1,optional"`
-		Field3 int16   `validate:"equals 1, optional"`
-		Field4 int32   `validate:"equals 1,optional"`
-		Field5 int64   `validate:"equals 1, optional"`
-		Field6 float32 `validate:"equals 1,optional"`
-		Field7 float64 `validate:"equals 1, optional"`
-	}
-
 	type testStructMixed struct {
-		SomeInt    int         `validate:"equals 1"`
-		SomeFloat  float64     `validate:"equals 1"`
-		SomeBool   bool        `validate:"equals 1"`
-		SomeNull   interface{} `validate:"equals 1"`
+		SomeInt    int         `validate:"required|equals 1"`
+		SomeFloat  float64     `validate:"required|equals 1"`
+		SomeBool   bool        `validate:"required|equals 1"`
+		SomeNull   interface{} `validate:"required|equals 1"`
 		SomeObject struct {
-			A string `validate:"equals 1"`
-			B string `validate:"equals 1"`
-		} `validate:"equals 1"`
-		SomeArray []int `validate:"equals 1"`
+			A string `validate:"required|equals 1"`
+			B string `validate:"required|equals 1"`
+		} `validate:"required|equals 1"`
+		SomeArray []int `validate:"required|equals 1"`
 	}
 
 	type testStructWithObject struct {
@@ -75,12 +75,12 @@ func TestValidrator_Validate(t *testing.T) {
 		} `validate:"equals 1"`
 	}
 
-	type testStructWithSafeUpTags struct {
-		SomeNull       int `validate:"nullable"`
-		SomeZero       int `validate:"nullable"`
-		SomeNotExists1 int `validate:"equals 1"`
-		SomeNotExists2 int `validate:"equals 1, nullable"`
-		SomeNotExists3 int `validate:"equals 1, optional"`
+	type testStructWithRequiredTags struct {
+		SomeNull       int
+		SomeZero       int
+		SomeNotExists1 int `validate:"required|equals 1"`
+		SomeNotExists2 int `validate:"required|equals 1"`
+		SomeNotExists3 int `validate:"equals 1"`
 	}
 
 	type testStructWithArray struct {
@@ -90,10 +90,21 @@ func TestValidrator_Validate(t *testing.T) {
 	}
 
 	type testStructWithIterativeTag struct {
-		SomeArray          []int `validate:"equals 1,[]equals 1"`
-		SomeArrayEmpty     []int `validate:"equals 1,[]equals 1"`
-		SomeArrayNull      []int `validate:"equals 1,[]equals 1"`
-		SomeArrayNotExists []int `validate:"equals 1,[]equals 1"`
+		SomeArray          []int `validate:"required|equals 1|[]equals 1"`
+		SomeArrayEmpty     []int `validate:"required|equals 1|[]equals 1"`
+		SomeArrayNull      []int `validate:"required|equals 1|[]equals 1"`
+		SomeArrayNotExists []int `validate:"required|equals 1|[]equals 1"`
+	}
+
+	type testStructWithoutTags struct {
+		SomeField1 string
+		SomeField2 string
+		SomeField3 string
+		SomeField4 string
+	}
+
+	type testStructWithIterativeRequiredTag struct {
+		SomeField []int `validate:"[]required"`
 	}
 
 	tests := []struct {
@@ -147,14 +158,14 @@ func TestValidrator_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "testStructNumbersWithEquals1AndOptional should valid",
+			name: "testStructNumbersWithEquals1AndNotRequired should valid",
 			inputJSON: `{
 				"field1": 1,
 				"field2": 1,
 				"field3": 1,
 				"field4": 1
 			}`,
-			expectedOutput: &testStructNumbersWithEquals1AndOptional{
+			expectedOutput: &testStructNumbersWithEquals1AndNotRequired{
 				Field1: 1,
 				Field2: 1,
 				Field3: 1,
@@ -163,27 +174,27 @@ func TestValidrator_Validate(t *testing.T) {
 				Field6: 0,
 				Field7: 0,
 			},
-			actualOutput:   &testStructNumbersWithEquals1AndOptional{},
+			actualOutput:   &testStructNumbersWithEquals1AndNotRequired{},
 			expectedErrors: map[string][]string{},
 			wantErr:        false,
 		},
 		{
-			name: "testStructNumbersWithEquals1AndOptional should invalid only by equals 1 rule but without required rule",
+			name: "testStructNumbersWithEquals1AndNotRequired should invalid only by equals 1 rule but without required rule",
 			inputJSON: `{
 				"field1": 1,
 				"field2": 1,
 				"field3": 1,
 				"field4": 2
 			}`,
-			expectedOutput: &testStructNumbersWithEquals1AndOptional{},
-			actualOutput:   &testStructNumbersWithEquals1AndOptional{},
+			expectedOutput: &testStructNumbersWithEquals1AndNotRequired{},
+			actualOutput:   &testStructNumbersWithEquals1AndNotRequired{},
 			expectedErrors: map[string][]string{
 				"field4": {"equals 1"},
 			},
 			wantErr: false,
 		},
 		{
-			name: "testStructNumbersWithEquals1AndOptional should error invalid json",
+			name: "testStructNumbersWithEquals1AndNotRequired should error invalid json",
 			// in this json trailing comma at the end. Its invalid in json
 			inputJSON: `{
 				"field1": 1,
@@ -191,8 +202,8 @@ func TestValidrator_Validate(t *testing.T) {
 				"field3": 1,
 				"field4": 1,
 			}`,
-			expectedOutput: &testStructNumbersWithEquals1AndOptional{},
-			actualOutput:   &testStructNumbersWithEquals1AndOptional{},
+			expectedOutput: &testStructNumbersWithEquals1AndNotRequired{},
+			actualOutput:   &testStructNumbersWithEquals1AndNotRequired{},
 			expectedErrors: nil,
 			wantErr:        true,
 		},
@@ -241,20 +252,20 @@ func TestValidrator_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "testStructWithSafeUpTags should some valid some invalid",
+			name: "testStructWithRequiredTags should some valid some invalid",
 			inputJSON: `{
 				"someNull": null,
 				"someZero": 0
 			}`,
 
-			expectedOutput: &testStructWithSafeUpTags{
+			expectedOutput: &testStructWithRequiredTags{
 				SomeNull:       0,
 				SomeZero:       0,
 				SomeNotExists1: 0,
 				SomeNotExists2: 0,
 				SomeNotExists3: 0,
 			},
-			actualOutput: &testStructWithSafeUpTags{},
+			actualOutput: &testStructWithRequiredTags{},
 			expectedErrors: map[string][]string{
 				"someNotExists1": {"required"},
 				"someNotExists2": {"required"},
@@ -298,6 +309,27 @@ func TestValidrator_Validate(t *testing.T) {
 				"someArrayNotExists": {"required"},
 			},
 			wantErr: false,
+		},
+		{
+			name: "testStructWithoutTags should invalid required even without tags",
+			inputJSON: `{
+			}`,
+
+			expectedOutput: &testStructWithoutTags{},
+			actualOutput:   &testStructWithoutTags{},
+			expectedErrors: map[string][]string{},
+			wantErr:        false,
+		},
+		{
+			name: "testStructWithIterativeRequiredTag should not return error",
+			inputJSON: `{
+				"someField": [1, null]
+			}`,
+
+			expectedOutput: &testStructWithIterativeRequiredTag{SomeField: []int{1, 0}},
+			actualOutput:   &testStructWithIterativeRequiredTag{},
+			expectedErrors: map[string][]string{},
+			wantErr:        false,
 		},
 	}
 

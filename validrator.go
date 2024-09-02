@@ -9,12 +9,18 @@ package validrator
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 
 	"github.com/thumbrise/validrator/internal/dot"
 	"github.com/thumbrise/validrator/internal/meta"
 	"github.com/thumbrise/validrator/internal/validation"
 )
 
+var inBuiltHandlers = map[string]validation.RuleHandlerFunc{
+	validation.TagRequired: func(_ reflect.Value, _ []string) bool {
+		return true
+	},
+}
 var errInvalidJSON = errors.New("invalid json")
 
 // Validrator is main struct of package. Create via constructor.
@@ -24,9 +30,12 @@ type Validrator struct {
 
 // NewValidrator constructor.
 func NewValidrator() *Validrator {
-	return &Validrator{
+	r := &Validrator{
 		handlers: make(map[string]validation.RuleHandlerFunc),
 	}
+	r.AddRuleHandlers(inBuiltHandlers)
+
+	return r
 }
 
 // Validate method processes validation by structure tags and marshall to that struct.

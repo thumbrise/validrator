@@ -8,16 +8,8 @@ import (
 
 var errInvalidRule = errors.New("invalid rule")
 
-// Special tags/rules.
-const (
-	// tagOptional allow not apply "required" error if field does not exist in input.
-	tagOptional = "optional"
-	// tagOptional allow not apply "required" error if field equals nil.
-	tagNullable = "nullable"
-
-	// tagRequired define rule which returns in validation error if optional/nullable not applied but field empty or even does not exist.
-	tagRequired = "required"
-)
+// TagRequired define rule which returns in validation error when field empty or even does not exist.
+const TagRequired = "required"
 
 // FieldValidationFail is fail entry of field.
 type FieldValidationFail struct {

@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	privateFieldVal = "-"
-	iterativePrefix = "[]"
+	privateFieldVal   = "-"
+	iterativePrefix   = "[]"
+	tagPartsSeparator = "|"
 )
 
 var errHierarchyFinished = errors.New("hierarchy finished")
@@ -34,14 +35,22 @@ func (t *TagsCollector) Extract(structure any) map[string][]string {
 func (t *TagsCollector) traverseHierarchy(structure any) map[string][]string {
 	result := make(map[string][]string)
 
-	toTraverse := make(map[string]reflect.StructField)
+	toTraverseRaw := make(map[string]reflect.StructField)
 	typesChain := make(map[string]bool)
-	_ = computeTraverseTree(structure, toTraverse, "", typesChain)
+
+	_ = computeTraverseTree(structure, toTraverseRaw, "", typesChain)
+
+	toTraverse := make(map[string]reflect.StructField)
+
+	for key, value := range toTraverseRaw {
+		keyWithoutDot := strings.TrimSuffix(key, ".")
+		toTraverse[keyWithoutDot] = value
+	}
 
 	for key, field := range toTraverse {
 		rawTag := field.Tag.Get(t.tagKey)
-		tagParts := strings.Split(rawTag, ",")
 
+		tagParts := strings.Split(rawTag, tagPartsSeparator)
 		if len(tagParts) == 0 {
 			continue
 		}
