@@ -19,7 +19,15 @@ func ToCamel(s string) string {
 	prevIsCap := false
 
 	for i, v := range []byte(s) {
-		vIsCap := v >= 'A' && v <= 'Z' || v == '.'
+		if v == '.' || v == '*' {
+			capNext = false
+
+			n.WriteByte(v)
+
+			continue
+		}
+
+		vIsCap := v >= 'A' && v <= 'Z'
 		vIsLow := v >= 'a' && v <= 'z'
 
 		if capNext {
@@ -48,13 +56,7 @@ func ToCamel(s string) string {
 
 			capNext = true
 		} else {
-			if v == '.' {
-				n.WriteByte(v)
-
-				prevIsCap = true
-			} else {
-				capNext = v == '_' || v == ' ' || v == '-'
-			}
+			capNext = v == '_' || v == ' ' || v == '-'
 		}
 	}
 

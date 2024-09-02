@@ -8,11 +8,14 @@ import (
 
 var errInvalidRule = errors.New("invalid rule")
 
+// Special tags/rules.
 const (
-	// tagOptional define type able to skip if value empty or field even does not exist.
+	// tagOptional allow not apply "required" error if field does not exist in input.
 	tagOptional = "optional"
+	// tagOptional allow not apply "required" error if field equals nil.
+	tagNullable = "nullable"
 
-	// tagRequired define rule which returns in validation error if optional not applied but field empty or even does not exist.
+	// tagRequired define rule which returns in validation error if optional/nullable not applied but field empty or even does not exist.
 	tagRequired = "required"
 )
 

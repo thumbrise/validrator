@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/thumbrise/validrator/internal/dot"
 	"github.com/thumbrise/validrator/internal/meta"
 	"github.com/thumbrise/validrator/internal/validation"
 )
@@ -69,11 +70,16 @@ func (v *Validrator) AddRuleHandlers(handlers map[string]validation.RuleHandlerF
 }
 
 func collectJSONMap(input []byte) (map[string]interface{}, error) {
-	data := make(map[string]interface{})
+	jsonMap := make(map[string]interface{})
 
-	err := jsonToMap(input, data)
+	err := jsonToMap(input, jsonMap)
+	if err != nil {
+		return nil, err
+	}
 
-	return data, err
+	result := dot.Map(jsonMap)
+
+	return result, nil
 }
 
 // ValidateJSON method processes validation of map by handlers.

@@ -9,7 +9,10 @@ import (
 	strings2 "github.com/thumbrise/validrator/internal/strings"
 )
 
-const privateFieldVal = "-"
+const (
+	privateFieldVal = "-"
+	iterativePrefix = "[]"
+)
 
 var errHierarchyFinished = errors.New("hierarchy finished")
 
@@ -51,6 +54,18 @@ func (t *TagsCollector) traverseHierarchy(structure any) map[string][]string {
 			tagPart = strings.TrimSpace(tagPart)
 			if tagPart == "" {
 				continue
+			}
+
+			// handle iterative tag
+			if strings.HasPrefix(tagPart, iterativePrefix) {
+				realTag := strings.TrimPrefix(tagPart, iterativePrefix)
+				if realTag == "" {
+					continue
+				}
+
+				// iterative tag applying to underlying values, so rewrite key with ".*" notation
+				tagPart = realTag
+				key += ".*"
 			}
 
 			result[key] = append(result[key], tagPart)

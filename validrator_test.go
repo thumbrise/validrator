@@ -1,4 +1,4 @@
-//nolint:cyclop
+//nolint:cyclop,maintidx
 package validrator_test
 
 import (
@@ -62,6 +62,38 @@ func TestValidrator_Validate(t *testing.T) {
 			B string `validate:"equals 1"`
 		} `validate:"equals 1"`
 		SomeArray []int `validate:"equals 1"`
+	}
+
+	type testStructWithObject struct {
+		SomeObject struct {
+			A1 struct {
+				A2 int `validate:"equals 1"`
+			} `validate:"equals 1"`
+			B1 struct {
+				B2 int `validate:"equals 1"`
+			} `validate:"equals 1"`
+		} `validate:"equals 1"`
+	}
+
+	type testStructWithSafeUpTags struct {
+		SomeNull       int `validate:"nullable"`
+		SomeZero       int `validate:"nullable"`
+		SomeNotExists1 int `validate:"equals 1"`
+		SomeNotExists2 int `validate:"equals 1, nullable"`
+		SomeNotExists3 int `validate:"equals 1, optional"`
+	}
+
+	type testStructWithArray struct {
+		SomeArrayNull      []int `validate:"nullable"`
+		SomeArrayNotExists []int `validate:"optional"`
+		SomeArrayEmpty     []int `validate:"equals 1"`
+	}
+
+	type testStructWithIterativeTag struct {
+		SomeArray          []int `validate:"equals 1,[]equals 1"`
+		SomeArrayEmpty     []int `validate:"equals 1,[]equals 1"`
+		SomeArrayNull      []int `validate:"equals 1,[]equals 1"`
+		SomeArrayNotExists []int `validate:"equals 1,[]equals 1"`
 	}
 
 	tests := []struct {
@@ -178,15 +210,97 @@ func TestValidrator_Validate(t *testing.T) {
 			expectedOutput: &testStructMixed{},
 			actualOutput:   &testStructMixed{},
 			expectedErrors: map[string][]string{
-				"someFloat":  {ruleEquals1.name},
-				"someBool":   {ruleEquals1.name},
-				"someNull":   {ruleEquals1.name},
-				"someObject": {ruleEquals1.name},
-				"someArray":  {ruleEquals1.name},
+				"someFloat":    {ruleEquals1.name},
+				"someBool":     {ruleEquals1.name},
+				"someNull":     {"required"},
+				"someObject":   {ruleEquals1.name},
+				"someObject.a": {ruleEquals1.name},
+				"someObject.b": {ruleEquals1.name},
+				"someArray":    {ruleEquals1.name},
+			},
+			wantErr: false,
+		},
+		{
+			name: "testStructWithObject should invalid",
+			inputJSON: `{
+				"someObject": {
+					"a1": {"a2": 2}, 
+					"b1": {"b2": 2}
+				}
+			}`,
+
+			expectedOutput: &testStructWithObject{},
+			actualOutput:   &testStructWithObject{},
+			expectedErrors: map[string][]string{
+				"someObject":       {ruleEquals1.name},
+				"someObject.a1":    {ruleEquals1.name},
+				"someObject.b1":    {ruleEquals1.name},
+				"someObject.a1.a2": {ruleEquals1.name},
+				"someObject.b1.b2": {ruleEquals1.name},
+			},
+			wantErr: false,
+		},
+		{
+			name: "testStructWithSafeUpTags should some valid some invalid",
+			inputJSON: `{
+				"someNull": null,
+				"someZero": 0
+			}`,
+
+			expectedOutput: &testStructWithSafeUpTags{
+				SomeNull:       0,
+				SomeZero:       0,
+				SomeNotExists1: 0,
+				SomeNotExists2: 0,
+				SomeNotExists3: 0,
+			},
+			actualOutput: &testStructWithSafeUpTags{},
+			expectedErrors: map[string][]string{
+				"someNotExists1": {"required"},
+				"someNotExists2": {"required"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "testStructWithArray should some valid some invalid",
+			inputJSON: `{
+				"someArrayNull": null,
+				"someArrayEmpty": []
+			}`,
+
+			expectedOutput: &testStructWithArray{
+				SomeArrayNull:      nil,
+				SomeArrayNotExists: nil,
+				SomeArrayEmpty:     nil,
+			},
+			actualOutput: &testStructWithArray{},
+			expectedErrors: map[string][]string{
+				"someArrayEmpty": {ruleEquals1.name},
+			},
+			wantErr: false,
+		},
+		{
+			name: "testStructWithIterativeTag should some valid some invalid",
+			inputJSON: `{
+				"someArray": [1,1,1,1,0,1,1,1,0,1],
+				"someArrayEmpty": [],
+				"someArrayNull": null
+			}`,
+
+			expectedOutput: &testStructWithIterativeTag{},
+			actualOutput:   &testStructWithIterativeTag{},
+			expectedErrors: map[string][]string{
+				"someArray":          {ruleEquals1.name},
+				"someArray.4":        {ruleEquals1.name},
+				"someArray.8":        {ruleEquals1.name},
+				"someArrayEmpty":     {ruleEquals1.name},
+				"someArrayNull":      {"required"},
+				"someArrayNotExists": {"required"},
 			},
 			wantErr: false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()

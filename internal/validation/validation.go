@@ -4,6 +4,7 @@ package validation
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -20,20 +21,78 @@ type Validatable struct {
 	Handlers map[string]RuleHandlerFunc
 }
 
+const iterativeRuleRegexStr = ".*\\.\\*$"
+
+var iterativeRuleRegex = regexp.MustCompile(iterativeRuleRegexStr)
+
+const iterativeRuleCompatibleRegexStr = "(.*)(\\..*)$"
+
+var iterativeRuleCompatibleRegex = regexp.MustCompile(iterativeRuleCompatibleRegexStr)
+
+func unwrapIterativeRules(validatable *Validatable) {
+	newRules := make(map[string][]string)
+
+	for ruleKey, ruleSet := range validatable.Rules {
+		if !iterativeRuleRegex.MatchString(ruleKey) {
+			newRules[ruleKey] = ruleSet
+
+			continue
+		}
+
+		ruleUnprefixed := strings.TrimSuffix(ruleKey, ".*")
+
+		for fieldKey := range validatable.JSON {
+			match := iterativeRuleCompatibleRegex.FindStringSubmatch(fieldKey)
+			if match == nil || len(match) <= 1 {
+				continue
+			}
+
+			fieldUnprefixed := match[1]
+
+			if ruleUnprefixed == fieldUnprefixed {
+				newRules[fieldKey] = ruleSet
+			}
+		}
+	}
+
+	validatable.Rules = newRules
+}
+
+func camelFieldKeys(validatable *Validatable) {
+	newFields := make(map[string]interface{})
+
+	for key, value := range validatable.JSON {
+		newKey := strings_thumbrise.ToCamel(key)
+		newFields[newKey] = value
+	}
+
+	validatable.JSON = newFields
+}
+
 // Validate method processes validation of map by rules.
 func Validate(validatable *Validatable) (*Error, error) {
+	camelFieldKeys(validatable)
+	unwrapIterativeRules(validatable)
+
 	validationErrors := make(map[string]FieldValidationFail)
 
 	for fieldKey, ruleSet := range validatable.Rules {
-		fieldKey = strings_thumbrise.ToCamel(fieldKey)
 		fieldValue, fieldExists := validatable.JSON[fieldKey]
 
 		reflectedValue := reflect.ValueOf(fieldValue)
 
-		if !fieldExists || (!reflectedValue.IsValid() && fieldValue == nil) {
-			// Optional is special rule
-			// If field empty BUT "optional" rule applied, then no "required" error
-			if !slices.Contains(ruleSet, tagOptional) {
+		// Handle empty or nil field
+		if !reflectedValue.IsValid() {
+			var safeUpTag string
+			if !fieldExists {
+				safeUpTag = tagOptional
+			} else {
+				safeUpTag = tagNullable
+			}
+
+			// If field empty or nil BUT some safeUpTag rule applied, then no "required" error
+			if !slices.Contains(ruleSet, safeUpTag) {
+				// Else add required error
 				validationErrors[fieldKey] = FieldValidationFail{
 					Field: fieldKey,
 					Rules: []string{tagRequired},
@@ -41,11 +100,12 @@ func Validate(validatable *Validatable) (*Error, error) {
 				}
 			}
 
+			// Any way, no reasons to continue validation on zero/empty field
 			continue
 		}
 
 		ruleSet = slices.DeleteFunc(ruleSet, func(s string) bool {
-			return s == tagOptional
+			return s == tagOptional || s == tagNullable
 		})
 
 		// Handle nested rules

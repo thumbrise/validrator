@@ -28,22 +28,31 @@ func TestExtract(t *testing.T) {
 	}
 
 	type testStruct struct {
-		SimpleField            string       `validate:"simple_field"`
-		SimpleFieldWithOptions string       `validate:"simple_field_with_options,omitempty"`
-		NestedStruct           innerStruct  `validate:"nested_struct"`
-		NestedPointerStruct    *innerStruct `validate:"nested_pointer_struct"`
-		DeepStruct             nestedStruct `validate:"deep_struct"`
-		AnonNestedStruct       struct {
+		SimpleField            string `validate:"simple_field"`
+		SimpleFieldWithOptions string `validate:"simple_field_with_options,omitempty"`
+
+		NestedStruct innerStruct `validate:"nested_struct"`
+
+		NestedPointerStruct *innerStruct `validate:"nested_pointer_struct"`
+
+		DeepStruct nestedStruct `validate:"deep_struct"`
+
+		AnonNestedStruct struct {
 			JustField               int `validate:"just_field"`
 			AnotherAnonNestedStruct struct {
 				JustField int `validate:"just_field"`
 			} `validate:"another_anon_nested_struct"`
 		} `validate:"anon_nested_struct"`
+
 		FieldWithMultipleTags bool `validate:"field_with_multiple_tags_json" xml:"field_with_multiple_tags_xml"`
-		Slice                 []struct {
+
+		Slice []struct {
 			JustBool        int    `validate:"just_bool"`
 			NestedBoolSlice []bool `validate:"nested_bool_slice"`
 		} `validate:"slice"`
+
+		SliceWithIterativeRule []int `validate:"equals 1,[]equals 1"`
+
 		NestedSelfReference struct {
 			JustField string      `validate:"just_field"`
 			SelfRef   *testStruct `validate:"self_ref"` // this field must be ignored
@@ -88,6 +97,9 @@ func TestExtract(t *testing.T) {
 		"slice":                   {"slice"},
 		"slice.*.justBool":        {"just_bool"},
 		"slice.*.nestedBoolSlice": {"nested_bool_slice"},
+
+		"sliceWithIterativeRule":   {"equals 1"},
+		"sliceWithIterativeRule.*": {"equals 1"},
 
 		"nestedSelfReference":           {"nested_self_reference"},
 		"nestedSelfReference.justField": {"just_field"},
@@ -374,6 +386,57 @@ func TestExtractInterface(t *testing.T) {
 		"slice":                   {"slice"},
 		"slice.*.justBool":        {"just_bool"},
 		"slice.*.nestedBoolSlice": {"nested_bool_slice"},
+	}
+
+	tests := []struct {
+		name string
+		args args
+		want map[string][]string
+	}{
+		{
+			name: "should return correct tag set for value struct",
+			args: args{
+				structure: testStruct{},
+				tagKey:    tagKey,
+			},
+			want: expected,
+		},
+		{
+			name: "should return correct tag set for pointer struct",
+			args: args{
+				structure: &testStruct{},
+				tagKey:    tagKey,
+			},
+			want: expected,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			collector := meta.NewTagsCollector(tt.args.tagKey)
+			if got := collector.Extract(tt.args.structure); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Wrong result\nexpected:\n%+v\nactual:\n%+v", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestExtractIterativeSlice(t *testing.T) {
+	t.Parallel()
+
+	type args struct {
+		structure any
+		tagKey    string
+	}
+
+	type testStruct struct {
+		SliceWithIterativeRule []int `validate:"equals 1,[]equals 1"`
+	}
+
+	expected := map[string][]string{
+		"sliceWithIterativeRule":   {"equals 1"},
+		"sliceWithIterativeRule.*": {"equals 1"},
 	}
 
 	tests := []struct {
