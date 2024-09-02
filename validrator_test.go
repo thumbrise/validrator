@@ -201,7 +201,7 @@ func TestValidrator_Validate(t *testing.T) {
 
 			// logic error check
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Validate() error = %validator, wantErr %validator", err, tt.wantErr)
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 
 				return
 			}
@@ -222,7 +222,7 @@ func TestValidrator_Validate(t *testing.T) {
 				diff := cmp.Diff(expectedJSON, actualJSON)
 				if diff != "" {
 					t.Errorf(
-						"validation errors not match\nexpected:\n%#validator\nactual:\n%#validator\ndiff:\n%s\n",
+						"validation errors not match\nexpected:\n%#v\nactual:\n%#v\ndiff:\n%s\n",
 						expectedValidationErrors,
 						actualValidationErrors.ToMap(),
 						diff,
@@ -235,7 +235,7 @@ func TestValidrator_Validate(t *testing.T) {
 			// output check
 			if err == nil {
 				if !reflect.DeepEqual(actualOutput, tt.expectedOutput) {
-					t.Errorf("Validate() got = %validator, want %validator", actualOutput, tt.expectedOutput)
+					t.Errorf("Validate() got = %v, want %v", actualOutput, tt.expectedOutput)
 				}
 
 				return

@@ -48,6 +48,8 @@ func Validate(validatable *Validatable) (*Error, error) {
 			return s == tagOptional
 		})
 
+		// Handle nested rules
+
 		fieldErrs, err := validateField(reflectedValue, ruleSet, validatable.Handlers)
 		if err != nil {
 			return nil, err
