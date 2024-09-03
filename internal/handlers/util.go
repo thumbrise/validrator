@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+var timeType = reflect.TypeOf(time.Time{})
+
 func panicIf(err error) {
 	if err != nil {
 		panic(err.Error())
@@ -75,7 +77,7 @@ func asFloat32(param string) float64 {
 
 // asBool returns the parameter as a bool
 // or panics if it can't convert.
-func asBool(param string) bool { //nolint:unused
+func asBool(param string) bool {
 	i, err := strconv.ParseBool(param)
 	panicIf(err)
 
